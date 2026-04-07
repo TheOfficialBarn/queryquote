@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
- * Last updated: 2026-04-06
- * The hero frames Query-Quote as a retrieval product first, while surfacing the course context, team, and the core system signals immediately.
+ * Last updated: 2026-04-07
+ * The hero frames Query-Quote as a retrieval product first, while surfacing the course context, team, and the core system signals immediately, with the primary CTA using explicit inline colors so its black background and white label survive theme and anchor inheritance rules.
  */
 
 import type { ProposalStat } from "@/types/queryquote";
@@ -49,13 +49,24 @@ export function HeroSection({ stats }: HeroSectionProps) {
 
             <div className="flex flex-wrap gap-3">
               <a
-                className="inline-flex items-center justify-center rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background transition-transform duration-300 hover:-translate-y-0.5"
+                className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition-transform duration-300 hover:-translate-y-0.5"
                 href="#search-mockup"
+                style={{
+                  backgroundColor: "#000000",
+                  color: "#ffffff",
+                  textDecoration: "none",
+                }}
               >
-                View search mockup
+                <span
+                  style={{
+                    color: "#ffffff",
+                  }}
+                >
+                  View search mockup
+                </span>
               </a>
               <a
-                className="inline-flex items-center justify-center rounded-full border border-border px-6 py-3 text-sm font-semibold text-foreground transition-colors duration-300 hover:bg-surface-strong"
+                className="inline-flex items-center justify-center rounded-full border border-border bg-white/45 px-6 py-3 text-sm font-semibold text-foreground transition-colors duration-300 hover:bg-surface-strong"
                 href="#evaluation"
               >
                 Review dataset and metrics

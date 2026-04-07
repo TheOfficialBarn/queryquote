@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
- * Last updated: 2026-04-06
- * Shared normalization helpers keep the quote search pipeline consistent across candidate generation, scoring, and snippet extraction.
+ * Last updated: 2026-04-07
+ * Shared normalization helpers keep the quote search pipeline consistent across candidate generation, scoring, and snippet extraction, including contraction-friendly normalization for quote lookups.
  */
 
 const STOPWORDS = new Set([
@@ -66,11 +66,21 @@ export function buildSearchableText(input: string): SearchableText {
 
   for (let index = 0; index < input.length; index += 1) {
     const character = input[index];
+    const previousCharacter = input[index - 1] ?? "";
+    const nextCharacter = input[index + 1] ?? "";
 
     if (/[a-z0-9]/i.test(character)) {
       normalized += character.toLowerCase();
       map.push(index);
       previousWasSpace = false;
+      continue;
+    }
+
+    if (
+      character === "'" &&
+      /[a-z0-9]/i.test(previousCharacter) &&
+      /[a-z0-9]/i.test(nextCharacter)
+    ) {
       continue;
     }
 

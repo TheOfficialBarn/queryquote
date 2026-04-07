@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
- * Last updated: 2026-04-06
- * This service executes a disk-backed quote search over the local transcript corpus using ripgrep for shortlist generation and in-process ranking for snippets and typo tolerance.
+ * Last updated: 2026-04-07
+ * This service executes a disk-backed quote search over the local transcript corpus using ripgrep for shortlist generation and in-process ranking for snippets and typo tolerance, with shortlist regexes that now preserve contractions in raw transcript text.
  */
 
 import "server-only";
@@ -16,12 +16,12 @@ import {
   getCoreTokens,
   getOrderedTokens,
   normalizeForSearch,
-} from "@/lib/search/normalize";
+} from "./normalize";
 import type {
   SearchApiResponse,
   SearchResult,
   SearchStrategy,
-} from "@/types/queryquote";
+} from "../../types/queryquote";
 
 const TRANSCRIPTS_DIRECTORY = path.join(
   /* turbopackIgnore: true */ process.cwd(),
@@ -29,10 +29,67 @@ const TRANSCRIPTS_DIRECTORY = path.join(
   "transcripts",
 );
 
-const MAX_CANDIDATE_FILES = 48;
+const MAX_CANDIDATE_FILES = 96;
 const MAX_RETURNED_RESULTS = 8;
 const FILE_CACHE_LIMIT = 32;
 const QUERY_CACHE_LIMIT = 24;
+const TITLE_CLUSTER_TOKEN_MIN_FREQUENCY = 2;
+const LONG_QUOTE_TOKEN_THRESHOLD = 6;
+const YEAR_BIAS_RECENCY_CUTOFF = 2010;
+const YEAR_BIAS_DIVISOR = 20;
+
+const TITLE_CLUSTER_STOPWORDS = new Set([
+  "adventure",
+  "adventures",
+  "chapter",
+  "episode",
+  "film",
+  "last",
+  "movie",
+  "new",
+  "part",
+  "return",
+  "special",
+  "story",
+  "the",
+]);
+
+const DOCUMENTARY_TITLE_PENALTIES: Array<{
+  pattern: RegExp;
+  value: number;
+}> = [
+  { pattern: /\blegacy\b/, value: 8 },
+  { pattern: /\brevealed\b/, value: 8 },
+  { pattern: /\bstory of\b/, value: 9 },
+  { pattern: /\bholiday special\b/, value: 7 },
+  { pattern: /\bspecial\b/, value: 4 },
+  { pattern: /\bdocumentary\b/, value: 8 },
+  { pattern: /\bmandela effect\b/, value: 7 },
+  { pattern: /\bout of darkness\b/, value: 6 },
+  { pattern: /\bgalaxy\b/, value: 4 },
+  { pattern: /\bbehind\b/, value: 4 },
+  { pattern: /\binside\b/, value: 4 },
+];
+
+const CONTEXT_META_PENALTIES: Array<{
+  pattern: RegExp;
+  value: number;
+}> = [
+  { pattern: /\bactual(ly)?\b/g, value: 3 },
+  { pattern: /\bmovie\b/g, value: 3 },
+  { pattern: /\bfilm\b/g, value: 3 },
+  { pattern: /\bquote\b/g, value: 4 },
+  { pattern: /\bscene\b/g, value: 3 },
+  { pattern: /\bcharacter\b/g, value: 3 },
+  { pattern: /\bactor\b/g, value: 4 },
+  { pattern: /\bdirector\b/g, value: 4 },
+  { pattern: /\bvoiced\b/g, value: 4 },
+  { pattern: /\btrilogy\b/g, value: 4 },
+  { pattern: /\bsaga\b/g, value: 4 },
+  { pattern: /\binterview\b/g, value: 4 },
+  { pattern: /\bone more time\b/g, value: 4 },
+  { pattern: /\bthat was great\b/g, value: 4 },
+];
 
 const fileCache = new Map<string, string>();
 const queryCache = new Map<string, SearchApiResponse>();
@@ -71,8 +128,14 @@ export async function searchMovieQuotes(query: string): Promise<SearchApiRespons
 
   const orderedTokens = getOrderedTokens(trimmedQuery).slice(0, 8);
   const coreTokens = getCoreTokens(trimmedQuery).slice(0, 6);
+  const fullPhraseTokens = normalizedQuery.split(" ").filter(Boolean).slice(0, 16);
 
-  const strategies = buildStrategies(trimmedQuery, orderedTokens, coreTokens);
+  const strategies = buildStrategies(
+    trimmedQuery,
+    orderedTokens,
+    coreTokens,
+    fullPhraseTokens,
+  );
   const candidateFiles = await shortlistCandidateFiles(strategies);
   const results = await rankCandidateFiles(
     candidateFiles,
@@ -109,36 +172,37 @@ function buildStrategies(
   rawQuery: string,
   orderedTokens: string[],
   coreTokens: string[],
+  fullPhraseTokens: string[],
 ): CandidateStrategy[] {
   const strategies: CandidateStrategy[] = [];
 
-  if (orderedTokens.length >= 2) {
-    const phrasePattern = orderedTokens
-      .map((token) => `\\b${escapeRegex(token)}\\b`)
+  if (fullPhraseTokens.length >= 2) {
+    const phrasePattern = fullPhraseTokens
+      .map((token) => `\\b${buildFlexibleTokenPattern(token)}\\b`)
       .join("\\W+");
 
     strategies.push({
       label: "Ordered phrase",
-      patternPreview: orderedTokens.join(" → "),
+      patternPreview: fullPhraseTokens.join(" → "),
       ripgrepArgs: buildRipgrepArgs(phrasePattern),
     });
   }
 
-  if (orderedTokens.length >= 3) {
-    const flexiblePattern = orderedTokens
-      .map((token) => `\\b${escapeRegex(token)}\\b`)
+  if (fullPhraseTokens.length >= 3) {
+    const flexiblePattern = fullPhraseTokens
+      .map((token) => `\\b${buildFlexibleTokenPattern(token)}\\b`)
       .join(".{0,32}?");
 
     strategies.push({
       label: "Ordered quote window",
-      patternPreview: orderedTokens.join(" ~ "),
+      patternPreview: fullPhraseTokens.join(" ~ "),
       ripgrepArgs: buildRipgrepArgs(flexiblePattern),
     });
   }
 
   if (coreTokens.length >= 2) {
     const loosePattern = coreTokens
-      .map((token) => `\\b${escapeRegex(token)}\\b`)
+      .map((token) => `\\b${buildFlexibleTokenPattern(token)}\\b`)
       .join("\\W+");
 
     strategies.push({
@@ -152,7 +216,7 @@ function buildStrategies(
 
   if (broadTokens.length > 0) {
     const tokenPattern = broadTokens
-      .map((token) => `\\b${escapeRegex(token)}\\b`)
+      .map((token) => `\\b${buildFlexibleTokenPattern(token)}\\b`)
       .join("|");
 
     strategies.push({
@@ -173,6 +237,13 @@ function buildStrategies(
   }
 
   return strategies;
+}
+
+function buildFlexibleTokenPattern(token: string) {
+  return token
+    .split("")
+    .map((character) => escapeRegex(character))
+    .join("['’]*");
 }
 
 function buildRipgrepArgs(pattern: string): string[] {
@@ -225,7 +296,8 @@ async function rankCandidateFiles(
   orderedTokens: string[],
   coreTokens: string[],
 ): Promise<SearchResult[]> {
-  const ranked = await Promise.all(
+  const queryTokenCount = normalizedQuery.split(" ").filter(Boolean).length;
+  const preliminaryResults = await Promise.all(
     candidateFiles.map(async (filePath) => {
       const content = await getCachedFileContent(filePath);
       const searchable = buildSearchableText(content);
@@ -247,20 +319,52 @@ async function rankCandidateFiles(
         score.anchorIndex,
         Math.max(rawQuery.length, normalizedQuery.length),
       );
+      const normalizedTitle = normalizeForSearch(titleDetails.title);
 
       return {
-        explanation: describeMatch(score),
-        matchType: score.matchType,
-        score: score.total,
+        normalizedTitle,
+        score,
         snippet,
         title: titleDetails.title,
+        titleTokens: extractTitleTokens(normalizedTitle),
         year: titleDetails.year,
-      } satisfies SearchResult;
+      };
     }),
   );
 
-  return ranked
-    .filter((result): result is SearchResult => result !== null)
+  const populatedResults = preliminaryResults.filter(
+    (
+      result,
+    ): result is NonNullable<(typeof preliminaryResults)[number]> => result !== null,
+  );
+  const clusterTokenFrequencies = buildClusterTokenFrequencies(populatedResults);
+
+  return populatedResults
+    .map((result) => {
+      const titleBias = scoreTitleBias(result.normalizedTitle, result.score.phraseHit);
+      const clusterBias = scoreClusterBias(
+        result.titleTokens,
+        clusterTokenFrequencies,
+        result.score.phraseHit,
+      );
+      const contextBias = scoreContextBias(result.snippet, result.score.phraseHit);
+      const yearBias = scoreYearBias(
+        result.year,
+        result.score.phraseHit,
+        queryTokenCount,
+      );
+      const finalScore =
+        result.score.total + titleBias + clusterBias + contextBias + yearBias;
+
+      return {
+        explanation: describeMatch(result.score, titleBias, clusterBias, contextBias),
+        matchType: result.score.matchType,
+        score: finalScore,
+        snippet: result.snippet,
+        title: result.title,
+        year: result.year,
+      } satisfies SearchResult;
+    })
     .sort((left, right) => right.score - left.score)
     .slice(0, MAX_RETURNED_RESULTS);
 }
@@ -527,8 +631,17 @@ function toBigramMap(value: string): Map<string, number> {
   return bigrams;
 }
 
-function describeMatch(score: CandidateScore) {
+function describeMatch(
+  score: CandidateScore,
+  titleBias: number,
+  clusterBias: number,
+  contextBias: number,
+) {
   if (score.phraseHit) {
+    if (titleBias > 0 || clusterBias > 0) {
+      return "Exact normalized phrase match found, with title-level origin signals boosting likely source films over commentary or derivative entries.";
+    }
+
     return "Exact normalized phrase match found in the transcript with strong local overlap.";
   }
 
@@ -537,10 +650,145 @@ function describeMatch(score: CandidateScore) {
   }
 
   if (score.matchType === "Ordered token match") {
+    if (contextBias > 0) {
+      return "The transcript preserves the query terms in sequence and the surrounding passage looks more like direct scene dialogue than commentary.";
+    }
+
     return "The transcript preserves the query terms in sequence, even though the wording is not an exact normalized phrase.";
   }
 
   return "The result surfaced from the broader token shortlist and stayed relevant after local overlap scoring.";
+}
+
+function extractTitleTokens(normalizedTitle: string) {
+  return [...new Set(
+    normalizedTitle
+      .split(" ")
+      .filter(
+        (token) =>
+          token.length >= 4 && !TITLE_CLUSTER_STOPWORDS.has(token),
+      ),
+  )];
+}
+
+function buildClusterTokenFrequencies(
+  results: Array<{
+    score: CandidateScore;
+    titleTokens: string[];
+  }>,
+) {
+  const frequencies = new Map<string, number>();
+
+  for (const result of results) {
+    if (!result.score.phraseHit) {
+      continue;
+    }
+
+    for (const token of result.titleTokens) {
+      frequencies.set(token, (frequencies.get(token) ?? 0) + 1);
+    }
+  }
+
+  return frequencies;
+}
+
+function scoreTitleBias(normalizedTitle: string, phraseHit: boolean) {
+  let score = 0;
+
+  if (phraseHit && /\bepisode\b/.test(normalizedTitle)) {
+    score += 8;
+  }
+
+  if (phraseHit && /\b(part|chapter)\b/.test(normalizedTitle)) {
+    score += 4;
+  }
+
+  for (const penalty of DOCUMENTARY_TITLE_PENALTIES) {
+    if (penalty.pattern.test(normalizedTitle)) {
+      score -= penalty.value;
+    }
+  }
+
+  return score;
+}
+
+function scoreClusterBias(
+  titleTokens: string[],
+  frequencies: Map<string, number>,
+  phraseHit: boolean,
+) {
+  if (!phraseHit) {
+    return 0;
+  }
+
+  let score = 0;
+
+  for (const token of titleTokens) {
+    const frequency = frequencies.get(token) ?? 0;
+
+    if (frequency >= TITLE_CLUSTER_TOKEN_MIN_FREQUENCY) {
+      score += frequency * 2.5;
+    }
+  }
+
+  return score;
+}
+
+function scoreContextBias(snippet: string, phraseHit: boolean) {
+  const normalizedSnippet = normalizeForSearch(snippet);
+  const sentenceSegments = snippet
+    .split(/[.!?…]+/)
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+
+  let score = 0;
+
+  for (const segment of sentenceSegments) {
+    const wordCount = normalizeForSearch(segment)
+      .split(" ")
+      .filter(Boolean).length;
+
+    if (wordCount > 0 && wordCount <= 8) {
+      score += 1.5;
+    }
+
+    if (wordCount >= 18) {
+      score -= 2;
+    }
+  }
+
+  for (const penalty of CONTEXT_META_PENALTIES) {
+    const matches = normalizedSnippet.match(penalty.pattern);
+
+    if (matches) {
+      score -= matches.length * penalty.value;
+    }
+  }
+
+  if (!phraseHit) {
+    return score * 0.5;
+  }
+
+  return score;
+}
+
+function scoreYearBias(
+  year: string,
+  phraseHit: boolean,
+  queryTokenCount: number,
+) {
+  if (!phraseHit || queryTokenCount < LONG_QUOTE_TOKEN_THRESHOLD) {
+    return 0;
+  }
+
+  const numericYear = Number.parseInt(year, 10);
+
+  if (!Number.isFinite(numericYear)) {
+    return 0;
+  }
+
+  return Math.max(0, YEAR_BIAS_RECENCY_CUTOFF - numericYear) / YEAR_BIAS_DIVISOR;
 }
 
 function parseTitleDetails(filePath: string) {

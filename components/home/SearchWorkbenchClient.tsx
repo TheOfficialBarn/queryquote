@@ -1,27 +1,26 @@
 /**
  * PROLOGUE COMMENT
- * Last updated: 2026-04-06
- * This client component turns the landing-page mockup into a real search workbench while keeping all retrieval and filesystem work in the server route.
+ * Last updated: 2026-04-07
+ * This client component turns the landing-page mockup into a real search workbench while keeping all retrieval and filesystem work in the server route, with explicit request-state handling so loading feedback appears immediately and searches only run when the user asks for them.
  */
 
 "use client";
 
-import { useEffect, useEffectEvent, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DemoQueryVariant, SearchApiResponse } from "@/types/queryquote";
 
 type SearchWorkbenchClientProps = {
   sampleQueries: DemoQueryVariant[];
 };
 
-const DEFAULT_QUERY = "may the force b with you";
-
 export function SearchWorkbenchClient({
   sampleQueries,
 }: SearchWorkbenchClientProps) {
-  const [query, setQuery] = useState(DEFAULT_QUERY);
+  const [query, setQuery] = useState("");
   const [response, setResponse] = useState<SearchApiResponse | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
+  const activeControllerRef = useRef<AbortController | null>(null);
 
   async function searchRequest(nextQuery: string) {
     const trimmedQuery = nextQuery.trim();
@@ -32,34 +31,47 @@ export function SearchWorkbenchClient({
       return;
     }
 
+    activeControllerRef.current?.abort();
+    const controller = new AbortController();
+    activeControllerRef.current = controller;
+
     setRequestError(null);
+    setIsLoading(true);
 
     try {
       const searchResponse = await fetch(
         `/api/search?q=${encodeURIComponent(trimmedQuery)}`,
+        {
+          signal: controller.signal,
+        },
       );
       const payload = (await searchResponse.json()) as SearchApiResponse;
 
       setResponse(payload);
       setRequestError(searchResponse.ok ? null : payload.error ?? "Search failed.");
-    } catch {
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
       setRequestError("Search failed before the local API returned a response.");
       setResponse(null);
+    } finally {
+      if (activeControllerRef.current === controller) {
+        activeControllerRef.current = null;
+        setIsLoading(false);
+      }
     }
   }
 
-  const runInitialSearch = useEffectEvent((nextQuery: string) => {
-    void searchRequest(nextQuery);
-  });
-
   useEffect(() => {
-    runInitialSearch(DEFAULT_QUERY);
+    return () => {
+      activeControllerRef.current?.abort();
+    };
   }, []);
 
   function submitSearch(nextQuery: string) {
-    startTransition(() => {
-      void searchRequest(nextQuery);
-    });
+    void searchRequest(nextQuery);
   }
 
   return (
@@ -87,10 +99,12 @@ export function SearchWorkbenchClient({
             <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/55">
               Quote query
             </span>
-            <textarea
-              className="mt-3 min-h-32 w-full rounded-[1.6rem] border border-white/10 bg-white/6 px-5 py-4 text-base text-white outline-none transition-colors duration-300 placeholder:text-white/35 focus:border-[#ffb38f]/55"
+            <input
+              className="mt-3 h-14 w-full rounded-[1.6rem] border border-white/12 bg-white/8 px-5 text-base text-white outline-none transition-colors duration-300 placeholder:text-white/35 focus:border-[#ffb38f]/65"
+              enterKeyHint="search"
               name="query"
               placeholder="Type a remembered line, misquote, or punctuation-free fragment."
+              type="search"
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -100,11 +114,12 @@ export function SearchWorkbenchClient({
 
           <div className="flex flex-wrap items-center gap-3">
             <button
-              className="inline-flex items-center justify-center rounded-full bg-[#ffb38f] px-5 py-3 text-sm font-semibold text-[#291d16] transition-transform duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={isPending}
+              className="inline-flex min-w-44 items-center justify-center gap-2 rounded-full border border-[#ffd2b8]/35 bg-[#ffb38f] px-5 py-3 text-sm font-semibold text-[#1e130d] shadow-[0_12px_30px_rgba(255,179,143,0.22)] transition-[transform,background-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:bg-[#ffc3a4] hover:shadow-[0_16px_36px_rgba(255,179,143,0.28)] disabled:cursor-not-allowed disabled:bg-[#b58a72] disabled:text-[#2a1d17] disabled:shadow-none"
+              disabled={isLoading}
               type="submit"
             >
-              {isPending ? "Searching corpus..." : "Search transcripts"}
+              {isLoading ? <span className="loading-spinner" aria-hidden="true" /> : null}
+              {isLoading ? "Searching corpus..." : "Search transcripts"}
             </button>
             <span className="text-sm leading-7 text-white/55">
               Uses ripgrep to shortlist local transcript files, then reranks them
@@ -118,6 +133,7 @@ export function SearchWorkbenchClient({
             <button
               key={sampleQuery.label}
               className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-left transition-colors duration-300 hover:bg-white/[0.08]"
+              disabled={isLoading}
               type="button"
               onClick={() => {
                 setQuery(sampleQuery.value);
@@ -143,7 +159,7 @@ export function SearchWorkbenchClient({
         </div>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid max-h-[72rem] gap-4 overflow-hidden lg:grid-rows-[auto_minmax(0,1fr)]">
         <article className="panel rounded-[1.75rem] p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -189,39 +205,41 @@ export function SearchWorkbenchClient({
         </article>
 
         {response?.results.length ? (
-          response.results.map((result, index) => (
-            <article key={`${result.title}-${result.year}-${index}`} className="panel rounded-[1.75rem] p-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent-cool">
-                    Rank {String(index + 1).padStart(2, "0")}
-                  </p>
-                  <h3 className="mt-2 [font-family:var(--font-display)] text-3xl text-foreground">
-                    {result.title}
-                  </h3>
-                  <p className="mt-1 text-sm uppercase tracking-[0.14em] text-muted">
-                    {result.year}
-                  </p>
+          <div className="scroll-panel grid gap-4 pr-1">
+            {response.results.map((result, index) => (
+              <article key={`${result.title}-${result.year}-${index}`} className="panel rounded-[1.75rem] p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent-cool">
+                      Rank {String(index + 1).padStart(2, "0")}
+                    </p>
+                    <h3 className="mt-2 [font-family:var(--font-display)] text-3xl text-foreground">
+                      {result.title}
+                    </h3>
+                    <p className="mt-1 text-sm uppercase tracking-[0.14em] text-muted">
+                      {result.year}
+                    </p>
+                  </div>
+                  <div className="rounded-[1.2rem] border border-border bg-surface-strong px-4 py-3 text-right">
+                    <p className="font-mono text-xl text-foreground">
+                      {result.score.toFixed(1)}
+                    </p>
+                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent-cool">
+                      {result.matchType}
+                    </p>
+                  </div>
                 </div>
-                <div className="rounded-[1.2rem] border border-border bg-surface-strong px-4 py-3 text-right">
-                  <p className="font-mono text-xl text-foreground">
-                    {result.score.toFixed(1)}
-                  </p>
-                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent-cool">
-                    {result.matchType}
-                  </p>
-                </div>
-              </div>
 
-              <blockquote className="mt-5 rounded-[1.35rem] border border-border/90 bg-white/55 px-5 py-4 [font-family:var(--font-display)] text-2xl leading-tight text-foreground">
-                {result.snippet}
-              </blockquote>
+                <blockquote className="mt-5 rounded-[1.35rem] border border-border/90 bg-white/55 px-5 py-4 [font-family:var(--font-display)] text-2xl leading-tight text-foreground">
+                  {result.snippet}
+                </blockquote>
 
-              <p className="mt-4 text-sm leading-7 text-muted">
-                {result.explanation}
-              </p>
-            </article>
-          ))
+                <p className="mt-4 text-sm leading-7 text-muted">
+                  {result.explanation}
+                </p>
+              </article>
+            ))}
+          </div>
         ) : (
           <article className="panel rounded-[1.75rem] p-6">
             <p className="text-sm leading-7 text-muted">

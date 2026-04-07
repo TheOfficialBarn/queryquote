@@ -1,11 +1,11 @@
 /**
  * PROLOGUE COMMENT
- * Last updated: 2026-04-06
- * This section now wraps the live search workbench so the homepage presents a real MVP search flow instead of only static demo cards.
+ * Last updated: 2026-04-07
+ * This section now wraps the live search workbench so the homepage presents a real MVP search flow instead of only static demo cards, with the interactive search client mounted client-side to avoid hydration drift during local development.
  */
 
+import { SearchWorkbenchShell } from "@/components/home/SearchWorkbenchShell";
 import { SectionIntro } from "@/components/home/SectionIntro";
-import { SearchWorkbenchClient } from "@/components/home/SearchWorkbenchClient";
 import type { DemoQueryVariant } from "@/types/queryquote";
 
 type SearchMockupProps = {
@@ -23,7 +23,7 @@ export function SearchMockup({ queries }: SearchMockupProps) {
         title="The homepage can now search the bundled transcript corpus directly."
         description="This search workbench runs against the local 59K+ transcript dataset. It shortlists candidate files on disk, normalizes the quote, and reranks results with ordered-token and fuzzy overlap signals so misquotes still have a chance to recover."
       />
-      <SearchWorkbenchClient sampleQueries={queries} />
+      <SearchWorkbenchShell sampleQueries={queries} />
     </section>
   );
 }

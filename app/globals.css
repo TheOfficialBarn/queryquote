@@ -2,8 +2,8 @@
 
 /*
 PROLOGUE COMMENT
-Last updated: 2026-04-06
-These global styles replace the starter palette with a warmer editorial search aesthetic, shared panel treatments, and simple entrance motion for the Query-Quote homepage.
+Last updated: 2026-04-07
+These global styles replace the starter palette with a warmer editorial search aesthetic, shared panel treatments, and simple entrance motion for the Query-Quote homepage, including hardened CTA styling plus reusable loading and scroll treatments for the live search UI.
 */
 
 :root {
@@ -131,6 +131,53 @@ a {
   animation: fade-rise 0.96s cubic-bezier(0.2, 1, 0.3, 1) 0.12s both;
 }
 
+.hero-primary-cta {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+.hero-primary-cta:hover {
+  background: rgba(0, 0, 0, 0.86) !important;
+  color: #ffffff !important;
+}
+
+.hero-primary-cta__label {
+  color: #ffffff !important;
+}
+
+.loading-spinner {
+  animation: spin 0.85s linear infinite;
+  border: 2px solid rgba(30, 19, 13, 0.18);
+  border-radius: 999px;
+  border-top-color: #1e130d;
+  display: inline-block;
+  height: 1rem;
+  flex: 0 0 auto;
+  width: 1rem;
+}
+
+.scroll-panel {
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.scroll-panel::-webkit-scrollbar {
+  width: 0.8rem;
+}
+
+.scroll-panel::-webkit-scrollbar-thumb {
+  background: rgba(42, 92, 101, 0.28);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.scroll-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 @keyframes fade-rise {
   from {
     opacity: 0;
@@ -140,5 +187,15 @@ a {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
