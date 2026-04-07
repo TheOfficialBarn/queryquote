@@ -1,12 +1,11 @@
 /**
  * PROLOGUE COMMENT
  * Last updated: 2026-04-06
- * This module centralizes the static content that drives the Query-Quote landing page so presentation components stay focused on layout.
+ * This module centralizes the static homepage content that remains useful even after the search section moved from static mock data to a live MVP.
  */
 
 import type {
   DemoQueryVariant,
-  DemoSearchResult,
   EvaluationMetric,
   ProposalStat,
   RetrievalCapability,
@@ -34,48 +33,18 @@ export const proposalStats: ProposalStat[] = [
 export const demoQueries: DemoQueryVariant[] = [
   {
     label: "Remembered line",
-    value: '"may the force b with you"',
+    value: "may the force b with you",
     tactic: "The user drops punctuation and mistypes one token, which is common for recalled dialogue.",
   },
   {
-    label: "Normalized query",
-    value: '"may the force be with you"',
-    tactic: "Normalization repairs spacing and punctuation so phrase retrieval and BM25 can align cleanly.",
+    label: "Partial quote",
+    value: "ill be back",
+    tactic: "A short remembered line tests whether the search can still surface the right movie from a very small lexical signal.",
   },
   {
-    label: "Semantic backup",
-    value: '"good luck, may the force guide you"',
-    tactic: "A semantic fallback can recover near-paraphrases when exact wording is unavailable.",
-  },
-];
-
-export const demoResults: DemoSearchResult[] = [
-  {
-    rank: "01",
-    title: "Star Wars",
-    year: "1977",
-    score: "0.97",
-    matchMode: "Phrase + fuzzy",
-    snippet: '"Luke, may the Force be with you."',
-    explanation: "Highest rank after typo repair changes the remembered query from 'b' to 'be' and confirms phrase order.",
-  },
-  {
-    rank: "02",
-    title: "The Empire Strikes Back",
-    year: "1980",
-    score: "0.81",
-    matchMode: "Phrase + proximity",
-    snippet: '"And may the Force be with you."',
-    explanation: "Strong lexical overlap remains, but the exact local wording is slightly weaker than the top hit.",
-  },
-  {
-    rank: "03",
-    title: "Return of the Jedi",
-    year: "1983",
-    score: "0.73",
-    matchMode: "Franchise neighbor",
-    snippet: '"May the Force be with you, always."',
-    explanation: "Returned as a close series match once the system broadens from exact phrase evidence to nearby variants.",
+    label: "Longer fragment",
+    value: "frankly my dear i dont give a damn",
+    tactic: "Punctuation-free input checks whether normalization keeps famous lines searchable without exact formatting.",
   },
 ];
 

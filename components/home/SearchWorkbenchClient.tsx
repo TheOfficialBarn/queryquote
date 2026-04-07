@@ -1,0 +1,236 @@
+/**
+ * PROLOGUE COMMENT
+ * Last updated: 2026-04-06
+ * This client component turns the landing-page mockup into a real search workbench while keeping all retrieval and filesystem work in the server route.
+ */
+
+"use client";
+
+import { useEffect, useEffectEvent, useState, useTransition } from "react";
+import type { DemoQueryVariant, SearchApiResponse } from "@/types/queryquote";
+
+type SearchWorkbenchClientProps = {
+  sampleQueries: DemoQueryVariant[];
+};
+
+const DEFAULT_QUERY = "may the force b with you";
+
+export function SearchWorkbenchClient({
+  sampleQueries,
+}: SearchWorkbenchClientProps) {
+  const [query, setQuery] = useState(DEFAULT_QUERY);
+  const [response, setResponse] = useState<SearchApiResponse | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  async function searchRequest(nextQuery: string) {
+    const trimmedQuery = nextQuery.trim();
+
+    if (!trimmedQuery) {
+      setResponse(null);
+      setRequestError("Enter a quote fragment to search.");
+      return;
+    }
+
+    setRequestError(null);
+
+    try {
+      const searchResponse = await fetch(
+        `/api/search?q=${encodeURIComponent(trimmedQuery)}`,
+      );
+      const payload = (await searchResponse.json()) as SearchApiResponse;
+
+      setResponse(payload);
+      setRequestError(searchResponse.ok ? null : payload.error ?? "Search failed.");
+    } catch {
+      setRequestError("Search failed before the local API returned a response.");
+      setResponse(null);
+    }
+  }
+
+  const runInitialSearch = useEffectEvent((nextQuery: string) => {
+    void searchRequest(nextQuery);
+  });
+
+  useEffect(() => {
+    runInitialSearch(DEFAULT_QUERY);
+  }, []);
+
+  function submitSearch(nextQuery: string) {
+    startTransition(() => {
+      void searchRequest(nextQuery);
+    });
+  }
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="panel panel--dark rounded-[2rem] p-6 sm:p-8">
+        <div className="flex items-center justify-between gap-4 text-xs font-semibold uppercase tracking-[0.18em] text-white/55">
+          <span>Live search console</span>
+          <span>Disk-backed transcript retrieval</span>
+        </div>
+
+        <div className="mt-6 flex items-center gap-2">
+          <span className="h-3 w-3 rounded-full bg-[#ff8f70]" />
+          <span className="h-3 w-3 rounded-full bg-[#f8c15a]" />
+          <span className="h-3 w-3 rounded-full bg-[#6bd08c]" />
+        </div>
+
+        <form
+          className="mt-6 space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submitSearch(query);
+          }}
+        >
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/55">
+              Quote query
+            </span>
+            <textarea
+              className="mt-3 min-h-32 w-full rounded-[1.6rem] border border-white/10 bg-white/6 px-5 py-4 text-base text-white outline-none transition-colors duration-300 placeholder:text-white/35 focus:border-[#ffb38f]/55"
+              name="query"
+              placeholder="Type a remembered line, misquote, or punctuation-free fragment."
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+              }}
+            />
+          </label>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              className="inline-flex items-center justify-center rounded-full bg-[#ffb38f] px-5 py-3 text-sm font-semibold text-[#291d16] transition-transform duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={isPending}
+              type="submit"
+            >
+              {isPending ? "Searching corpus..." : "Search transcripts"}
+            </button>
+            <span className="text-sm leading-7 text-white/55">
+              Uses ripgrep to shortlist local transcript files, then reranks them
+              with normalized phrase and fuzzy overlap scoring.
+            </span>
+          </div>
+        </form>
+
+        <div className="mt-6 grid gap-4">
+          {sampleQueries.map((sampleQuery) => (
+            <button
+              key={sampleQuery.label}
+              className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-left transition-colors duration-300 hover:bg-white/[0.08]"
+              type="button"
+              onClick={() => {
+                setQuery(sampleQuery.value);
+                submitSearch(sampleQuery.value);
+              }}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#f3c7ae]">
+                  {sampleQuery.label}
+                </p>
+                <span className="rounded-full border border-white/12 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-white/55">
+                  sample search
+                </span>
+              </div>
+              <p className="mt-4 font-mono text-sm leading-7 text-white/90">
+                {sampleQuery.value}
+              </p>
+              <p className="mt-3 text-sm leading-7 text-white/65">
+                {sampleQuery.tactic}
+              </p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4">
+        <article className="panel rounded-[1.75rem] p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent-cool">
+                Search diagnostics
+              </p>
+              <h3 className="mt-2 [font-family:var(--font-display)] text-3xl text-foreground">
+                {response?.diagnostics.normalizedQuery || "Waiting for query"}
+              </h3>
+            </div>
+            <div className="rounded-[1.2rem] border border-border bg-surface-strong px-4 py-3 text-right">
+              <p className="font-mono text-xl text-foreground">
+                {response?.diagnostics.elapsedMs ?? 0}ms
+              </p>
+              <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent-cool">
+                query time
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            {(response?.diagnostics.strategies ?? []).map((strategy) => (
+              <span
+                key={`${strategy.label}-${strategy.patternPreview}`}
+                className="rounded-full border border-border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-foreground/75"
+              >
+                {strategy.label}: {strategy.patternPreview}
+              </span>
+            ))}
+          </div>
+
+          <p className="mt-5 text-sm leading-7 text-muted">
+            {response
+              ? `Searched ${response.diagnostics.searchedFiles ?? 0} candidate transcript files from the local corpus and returned the highest-scoring matches.`
+              : "Run a query to see how normalization and candidate-generation strategies behave on the local corpus."}
+          </p>
+
+          {requestError ? (
+            <p className="mt-4 rounded-[1.2rem] border border-[#c76735]/25 bg-[#c76735]/8 px-4 py-3 text-sm leading-7 text-[#6f3215]">
+              {requestError}
+            </p>
+          ) : null}
+        </article>
+
+        {response?.results.length ? (
+          response.results.map((result, index) => (
+            <article key={`${result.title}-${result.year}-${index}`} className="panel rounded-[1.75rem] p-6">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent-cool">
+                    Rank {String(index + 1).padStart(2, "0")}
+                  </p>
+                  <h3 className="mt-2 [font-family:var(--font-display)] text-3xl text-foreground">
+                    {result.title}
+                  </h3>
+                  <p className="mt-1 text-sm uppercase tracking-[0.14em] text-muted">
+                    {result.year}
+                  </p>
+                </div>
+                <div className="rounded-[1.2rem] border border-border bg-surface-strong px-4 py-3 text-right">
+                  <p className="font-mono text-xl text-foreground">
+                    {result.score.toFixed(1)}
+                  </p>
+                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent-cool">
+                    {result.matchType}
+                  </p>
+                </div>
+              </div>
+
+              <blockquote className="mt-5 rounded-[1.35rem] border border-border/90 bg-white/55 px-5 py-4 [font-family:var(--font-display)] text-2xl leading-tight text-foreground">
+                {result.snippet}
+              </blockquote>
+
+              <p className="mt-4 text-sm leading-7 text-muted">
+                {result.explanation}
+              </p>
+            </article>
+          ))
+        ) : (
+          <article className="panel rounded-[1.75rem] p-6">
+            <p className="text-sm leading-7 text-muted">
+              No results have been returned yet. Try one of the sample queries or
+              enter a memorable line from a movie transcript.
+            </p>
+          </article>
+        )}
+      </div>
+    </div>
+  );
+}

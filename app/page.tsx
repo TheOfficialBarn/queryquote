@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
  * Last updated: 2026-04-06
- * This page replaces the starter template with a componentized Query-Quote landing page that mirrors the proposal's IR scope without pretending the backend exists yet.
+ * This page now presents a real search MVP alongside the proposal content, keeping the live transcript search isolated to the search section while the rest of the page remains server-rendered.
  */
 
 import { DatasetEvaluationSection } from "@/components/home/DatasetEvaluationSection";
@@ -11,7 +11,6 @@ import { SearchMockup } from "@/components/home/SearchMockup";
 import { SystemOverview } from "@/components/home/SystemOverview";
 import {
   demoQueries,
-  demoResults,
   evaluationMetrics,
   proposalStats,
   retrievalCapabilities,
@@ -22,7 +21,7 @@ export default function Home() {
   return (
     <main className="page-shell pb-8">
       <HeroSection stats={proposalStats} />
-      <SearchMockup queries={demoQueries} results={demoResults} />
+      <SearchMockup queries={demoQueries} />
       <SystemOverview capabilities={retrievalCapabilities} />
       <DatasetEvaluationSection metrics={evaluationMetrics} tools={toolGroups} />
       <FooterNote />

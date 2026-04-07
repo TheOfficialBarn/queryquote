@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
  * Last updated: 2026-04-06
- * Shared homepage types keep the mock search content structured so the static demo can be replaced with live backend data later.
+ * Shared homepage types cover both the presentation content and the live transcript search response contract used by the homepage client.
  */
 
 export type ProposalStat = {
@@ -14,16 +14,6 @@ export type DemoQueryVariant = {
   label: string;
   value: string;
   tactic: string;
-};
-
-export type DemoSearchResult = {
-  rank: string;
-  title: string;
-  year: string;
-  score: string;
-  matchMode: string;
-  snippet: string;
-  explanation: string;
 };
 
 export type RetrievalCapability = {
@@ -41,4 +31,35 @@ export type EvaluationMetric = {
 export type ToolGroup = {
   category: string;
   items: string[];
+};
+
+export type SearchStrategy = {
+  label: string;
+  patternPreview: string;
+};
+
+export type SearchResult = {
+  explanation: string;
+  matchType:
+    | "Phrase match"
+    | "Fuzzy + ordered"
+    | "Ordered token match"
+    | "Token shortlist";
+  score: number;
+  snippet: string;
+  title: string;
+  year: string;
+};
+
+export type SearchApiResponse = {
+  diagnostics: {
+    cacheHit?: boolean;
+    elapsedMs: number;
+    normalizedQuery: string;
+    searchedFiles?: number;
+    strategies: SearchStrategy[];
+  };
+  error?: string;
+  query: string;
+  results: SearchResult[];
 };
