@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
  * Last updated: 2026-04-07
- * This service executes a disk-backed quote search over the local transcript corpus using ripgrep for shortlist generation and in-process ranking for snippets and typo tolerance, with shortlist regexes that now preserve contractions in raw transcript text.
+ * This service executes a disk-backed quote search over the local transcript corpus using ripgrep for shortlist generation and in-process ranking for snippets and typo tolerance, and now exposes tokenization and scoring diagnostics for the professor-facing search page.
  */
 
 import "server-only";
@@ -13,7 +13,9 @@ import { spawn } from "node:child_process";
 import {
   buildSearchableText,
   escapeRegex,
+  getFilteredTokens,
   getCoreTokens,
+  getNormalizedTokens,
   getOrderedTokens,
   normalizeForSearch,
 } from "./normalize";
@@ -106,7 +108,15 @@ export async function searchMovieQuotes(query: string): Promise<SearchApiRespons
       diagnostics: {
         elapsedMs: 0,
         normalizedQuery,
+        rankingNotes: [],
+        scoreWeights: [],
         strategies: [],
+        tokenization: {
+          coreTokens: [],
+          filteredTokens: [],
+          normalizedTokens: [],
+          orderedTokens: [],
+        },
       },
       error: "Enter at least three characters to search the transcript corpus.",
       query: trimmedQuery,
@@ -128,7 +138,9 @@ export async function searchMovieQuotes(query: string): Promise<SearchApiRespons
 
   const orderedTokens = getOrderedTokens(trimmedQuery).slice(0, 8);
   const coreTokens = getCoreTokens(trimmedQuery).slice(0, 6);
-  const fullPhraseTokens = normalizedQuery.split(" ").filter(Boolean).slice(0, 16);
+  const normalizedTokens = getNormalizedTokens(trimmedQuery).slice(0, 16);
+  const filteredTokens = getFilteredTokens(trimmedQuery).slice(0, 8);
+  const fullPhraseTokens = normalizedTokens;
 
   const strategies = buildStrategies(
     trimmedQuery,
@@ -149,11 +161,19 @@ export async function searchMovieQuotes(query: string): Promise<SearchApiRespons
     diagnostics: {
       elapsedMs: Math.round(performance.now() - startedAt),
       normalizedQuery,
+      rankingNotes: buildRankingNotes(),
+      scoreWeights: buildScoreWeights(),
       searchedFiles: candidateFiles.length,
       strategies: strategies.map((strategy) => ({
         label: strategy.label,
         patternPreview: strategy.patternPreview,
       })),
+      tokenization: {
+        coreTokens,
+        filteredTokens,
+        normalizedTokens,
+        orderedTokens,
+      },
     },
     query: trimmedQuery,
     results,
@@ -162,6 +182,49 @@ export async function searchMovieQuotes(query: string): Promise<SearchApiRespons
   remember(queryCache, normalizedQuery, response, QUERY_CACHE_LIMIT);
 
   return response;
+}
+
+function buildRankingNotes() {
+  return [
+    "Candidate generation uses ordered phrase, ordered quote-window, core-term, and token-shortlist ripgrep passes over the local transcript files.",
+    "Final ranking combines exact phrase detection, token coverage, ordered coverage, proximity, fuzzy bigram overlap, and light title/context/year biases.",
+    "Very short or franchise-reused quotes can still be ambiguous because multiple films in the corpus may contain the same normalized line.",
+  ];
+}
+
+function buildScoreWeights() {
+  return [
+    {
+      label: "Exact phrase hit",
+      purpose: "Strong boost when the normalized query appears as a full phrase boundary in a transcript passage.",
+      weight: "+72 base",
+    },
+    {
+      label: "Token coverage",
+      purpose: "Rewards how many meaningful quote terms appear anywhere in the candidate transcript.",
+      weight: "+10 max",
+    },
+    {
+      label: "Ordered coverage",
+      purpose: "Rewards candidates that preserve the left-to-right order of the quote terms.",
+      weight: "+10 max",
+    },
+    {
+      label: "Proximity",
+      purpose: "Rewards candidates where matched terms occur near one another inside the same local window.",
+      weight: "+20 max",
+    },
+    {
+      label: "Fuzzy overlap",
+      purpose: "Uses bigram Dice similarity so punctuation-free or slightly misremembered lines can stay competitive.",
+      weight: "+20 max",
+    },
+    {
+      label: "Title/context/year bias",
+      purpose: "Light heuristic adjustment to demote derivative commentary titles and break ties among exact matches.",
+      weight: "small tie-breaker",
+    },
+  ];
 }
 
 type CandidateStrategy = SearchStrategy & {

@@ -1,16 +1,18 @@
 /**
  * PROLOGUE COMMENT
  * Last updated: 2026-04-07
- * This client wrapper mounts the interactive search workbench without server-rendering its markup, which avoids development-time hydration drift while keeping the surrounding page server-rendered, with Tailwind-only loading state styling.
+ * This client wrapper mounts the interactive search workbench without server-rendering its markup, which avoids development-time hydration drift while keeping the surrounding page server-rendered, and now forwards server-loaded regression cases and initial query state into the client console.
  */
 
 "use client";
 
 import dynamic from "next/dynamic";
-import type { DemoQueryVariant } from "@/types/queryquote";
+import type { DemoQueryVariant, SearchTestCase } from "@/types/queryquote";
 
 type SearchWorkbenchShellProps = {
+  initialQuery?: string;
   sampleQueries: DemoQueryVariant[];
+  testCases?: SearchTestCase[];
 };
 
 const SearchWorkbenchClient = dynamic(
@@ -29,7 +31,15 @@ const SearchWorkbenchClient = dynamic(
 );
 
 export function SearchWorkbenchShell({
+  initialQuery,
   sampleQueries,
+  testCases = [],
 }: SearchWorkbenchShellProps) {
-  return <SearchWorkbenchClient sampleQueries={sampleQueries} />;
+  return (
+    <SearchWorkbenchClient
+      initialQuery={initialQuery}
+      sampleQueries={sampleQueries}
+      testCases={testCases}
+    />
+  );
 }

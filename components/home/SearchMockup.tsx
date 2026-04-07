@@ -1,18 +1,24 @@
 /**
  * PROLOGUE COMMENT
  * Last updated: 2026-04-07
- * This section now wraps the live search workbench so the homepage presents a real MVP search flow instead of only static demo cards, with the interactive search client mounted client-side to avoid hydration drift during local development.
+ * This section wraps the live search workbench and now accepts server-provided regression fixtures plus an optional prefilled query so the dedicated search page can present both an MVP search flow and an evaluation surface.
  */
 
 import { SearchWorkbenchShell } from "@/components/home/SearchWorkbenchShell";
 import { SectionIntro } from "@/components/home/SectionIntro";
-import type { DemoQueryVariant } from "@/types/queryquote";
+import type { DemoQueryVariant, SearchTestCase } from "@/types/queryquote";
 
 type SearchMockupProps = {
+  initialQuery?: string;
   queries: DemoQueryVariant[];
+  testCases?: SearchTestCase[];
 };
 
-export function SearchMockup({ queries }: SearchMockupProps) {
+export function SearchMockup({
+  initialQuery,
+  queries,
+  testCases = [],
+}: SearchMockupProps) {
   return (
     <section
       id="search-mockup"
@@ -20,10 +26,14 @@ export function SearchMockup({ queries }: SearchMockupProps) {
     >
       <SectionIntro
         eyebrow="Live Search MVP"
-        title="The homepage can now search the bundled transcript corpus directly."
-        description="This search workbench runs against the local 59K+ transcript dataset. It shortlists candidate files on disk, normalizes the quote, and reranks results with ordered-token and fuzzy overlap signals so misquotes still have a chance to recover."
+        title="The search page now exposes both retrieval results and retrieval reasoning."
+        description="This workbench runs against the local 59K+ transcript dataset, then surfaces the same intermediate views an IR evaluator would want to inspect: tokenization, candidate-generation strategies, heuristic score weights, expected test cases, and the raw API payload."
       />
-      <SearchWorkbenchShell sampleQueries={queries} />
+      <SearchWorkbenchShell
+        initialQuery={initialQuery}
+        sampleQueries={queries}
+        testCases={testCases}
+      />
     </section>
   );
 }

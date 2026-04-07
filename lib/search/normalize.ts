@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
  * Last updated: 2026-04-07
- * Shared normalization helpers keep the quote search pipeline consistent across candidate generation, scoring, and snippet extraction, including contraction-friendly normalization for quote lookups.
+ * Shared normalization helpers keep the quote search pipeline consistent across candidate generation, scoring, and snippet extraction, including contraction-friendly normalization and reusable token views for diagnostics.
  */
 
 const STOPWORDS = new Set([
@@ -106,15 +106,26 @@ export function normalizeForSearch(input: string): string {
   return buildSearchableText(input).normalized;
 }
 
+export function getNormalizedTokens(input: string): string[] {
+  return normalizeForSearch(input).split(" ").filter(Boolean);
+}
+
 export function getOrderedTokens(input: string): string[] {
-  return uniqueTokens(normalizeForSearch(input).split(" ").filter((token) => token.length >= 2));
+  return uniqueTokens(getNormalizedTokens(input).filter((token) => token.length >= 2));
 }
 
 export function getCoreTokens(input: string): string[] {
   return uniqueTokens(
-    normalizeForSearch(input)
-      .split(" ")
+    getNormalizedTokens(input)
       .filter((token) => token.length >= 3 && !STOPWORDS.has(token)),
+  );
+}
+
+export function getFilteredTokens(input: string): string[] {
+  return uniqueTokens(
+    getNormalizedTokens(input).filter(
+      (token) => token.length < 3 || STOPWORDS.has(token),
+    ),
   );
 }
 

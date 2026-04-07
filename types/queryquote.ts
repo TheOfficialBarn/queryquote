@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
- * Last updated: 2026-04-06
- * Shared homepage types cover both the presentation content and the live transcript search response contract used by the homepage client.
+ * Last updated: 2026-04-07
+ * Shared site types cover both the presentation content and the richer live transcript search response contract now exposed on the professor-facing search page.
  */
 
 export type ProposalStat = {
@@ -38,6 +38,19 @@ export type SearchStrategy = {
   patternPreview: string;
 };
 
+export type SearchTokenDiagnostics = {
+  coreTokens: string[];
+  filteredTokens: string[];
+  normalizedTokens: string[];
+  orderedTokens: string[];
+};
+
+export type SearchScoreWeight = {
+  label: string;
+  purpose: string;
+  weight: string;
+};
+
 export type SearchResult = {
   explanation: string;
   matchType:
@@ -56,10 +69,19 @@ export type SearchApiResponse = {
     cacheHit?: boolean;
     elapsedMs: number;
     normalizedQuery: string;
+    rankingNotes: string[];
+    scoreWeights: SearchScoreWeight[];
     searchedFiles?: number;
     strategies: SearchStrategy[];
+    tokenization: SearchTokenDiagnostics;
   };
   error?: string;
   query: string;
   results: SearchResult[];
+};
+
+export type SearchTestCase = {
+  movie: string;
+  quote: string;
+  year: number;
 };

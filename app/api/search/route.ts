@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
- * Last updated: 2026-04-06
- * This route exposes the local transcript search service to the homepage client without coupling UI components to filesystem and process-level search concerns.
+ * Last updated: 2026-04-07
+ * This route exposes the local transcript search service to the homepage client without coupling UI components to filesystem and process-level search concerns, including the richer diagnostics needed for the professor-facing search page.
  */
 
 import type { NextRequest } from "next/server";
@@ -27,6 +27,14 @@ export async function GET(request: NextRequest) {
         diagnostics: {
           elapsedMs: 0,
           normalizedQuery: "",
+          rankingNotes: [],
+          scoreWeights: [],
+          tokenization: {
+            coreTokens: [],
+            filteredTokens: [],
+            normalizedTokens: [],
+            orderedTokens: [],
+          },
           strategies: [],
         },
         error: message,
