@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
- * Last updated: 2026-04-06
- * The footer closes the landing page by clarifying that the current deliverable is a polished presentation artifact rather than a shipped retrieval backend.
+ * Last updated: 2026-04-07
+ * The footer closes each route by clarifying that the current deliverable is a polished multi-page project shell around the local search MVP rather than a fully shipped retrieval backend.
  */
 
 export function FooterNote() {
@@ -14,8 +14,9 @@ export function FooterNote() {
               Current phase
             </p>
             <p className="max-w-3xl text-sm leading-7 text-muted">
-              This site is a polished project homepage and search mockup for the
-              Query-Quote proposal. The full written draft lives in{" "}
+              This site is a polished multi-page project shell for Query-Quote,
+              with a live local search MVP plus dedicated methods and about
+              pages. The full written draft lives in{" "}
               <code className="rounded bg-surface-strong px-2 py-1 text-foreground">
                 PROPOSAL.md
               </code>

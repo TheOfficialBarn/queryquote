@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
  * Last updated: 2026-04-07
- * This client component turns the landing-page mockup into a real search workbench while keeping all retrieval and filesystem work in the server route, with explicit request-state handling so loading feedback appears immediately and searches only run when the user asks for them.
+ * This client component turns the landing-page mockup into a real search workbench while keeping all retrieval and filesystem work in the server route, with explicit request-state handling and neutral dark controls that match the charcoal site theme.
  */
 
 "use client";
@@ -83,9 +83,9 @@ export function SearchWorkbenchClient({
         </div>
 
         <div className="mt-6 flex items-center gap-2">
-          <span className="h-3 w-3 rounded-full bg-[#ff8f70]" />
-          <span className="h-3 w-3 rounded-full bg-[#f8c15a]" />
-          <span className="h-3 w-3 rounded-full bg-[#6bd08c]" />
+          <span className="h-3 w-3 rounded-full bg-white/80" />
+          <span className="h-3 w-3 rounded-full bg-white/45" />
+          <span className="h-3 w-3 rounded-full bg-white/20" />
         </div>
 
         <form
@@ -100,7 +100,7 @@ export function SearchWorkbenchClient({
               Quote query
             </span>
             <input
-              className="mt-3 h-14 w-full rounded-[1.6rem] border border-white/12 bg-white/8 px-5 text-base text-white outline-none transition-colors duration-300 placeholder:text-white/35 focus:border-[#ffb38f]/65"
+              className="mt-3 h-14 w-full rounded-[1.6rem] border border-white/10 bg-white/6 px-5 text-base text-white outline-none transition-colors duration-300 placeholder:text-white/35 focus:border-white/30"
               enterKeyHint="search"
               name="query"
               placeholder="Type a remembered line, misquote, or punctuation-free fragment."
@@ -114,7 +114,7 @@ export function SearchWorkbenchClient({
 
           <div className="flex flex-wrap items-center gap-3">
             <button
-              className="inline-flex min-w-44 items-center justify-center gap-2 rounded-full border border-[#ffd2b8]/35 bg-[#ffb38f] px-5 py-3 text-sm font-semibold text-[#1e130d] shadow-[0_12px_30px_rgba(255,179,143,0.22)] transition-[transform,background-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:bg-[#ffc3a4] hover:shadow-[0_16px_36px_rgba(255,179,143,0.28)] disabled:cursor-not-allowed disabled:bg-[#b58a72] disabled:text-[#2a1d17] disabled:shadow-none"
+              className="inline-flex min-w-44 items-center justify-center gap-2 rounded-full border border-white/10 bg-white px-5 py-3 text-sm font-semibold text-black shadow-[0_12px_28px_rgba(0,0,0,0.2)] transition-[transform,background-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:bg-neutral-200 hover:shadow-[0_16px_32px_rgba(0,0,0,0.24)] disabled:cursor-not-allowed disabled:bg-neutral-500 disabled:text-neutral-900 disabled:shadow-none"
               disabled={isLoading}
               type="submit"
             >
@@ -141,7 +141,7 @@ export function SearchWorkbenchClient({
               }}
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#f3c7ae]">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/58">
                   {sampleQuery.label}
                 </p>
                 <span className="rounded-full border border-white/12 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-white/55">
@@ -198,7 +198,7 @@ export function SearchWorkbenchClient({
           </p>
 
           {requestError ? (
-            <p className="mt-4 rounded-[1.2rem] border border-[#c76735]/25 bg-[#c76735]/8 px-4 py-3 text-sm leading-7 text-[#6f3215]">
+            <p className="mt-4 rounded-[1.2rem] border border-white/10 bg-[#1b1b1b] px-4 py-3 text-sm leading-7 text-white/72">
               {requestError}
             </p>
           ) : null}

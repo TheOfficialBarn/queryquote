@@ -1,9 +1,10 @@
 /**
  * PROLOGUE COMMENT
  * Last updated: 2026-04-07
- * The hero frames Query-Quote as a retrieval product first, while surfacing the course context, team, and the core system signals immediately, with the primary CTA using explicit inline colors so its black background and white label survive theme and anchor inheritance rules.
+ * The hero frames Query-Quote as a retrieval product first, while surfacing the course context, team, and the core system signals immediately, now tuned to the darker neutral palette with black, charcoal, and white controls.
  */
 
+import Link from "next/link";
 import type { ProposalStat } from "@/types/queryquote";
 
 type HeroSectionProps = {
@@ -48,13 +49,14 @@ export function HeroSection({ stats }: HeroSectionProps) {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <a
+              <Link
                 className="inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition-transform duration-300 hover:-translate-y-0.5"
-                href="#search-mockup"
+                href="/search"
                 style={{
                   backgroundColor: "#000000",
                   color: "#ffffff",
                   textDecoration: "none",
+                  boxShadow: "0 18px 36px rgba(0, 0, 0, 0.22)",
                 }}
               >
                 <span
@@ -64,13 +66,13 @@ export function HeroSection({ stats }: HeroSectionProps) {
                 >
                   View search mockup
                 </span>
-              </a>
-              <a
-                className="inline-flex items-center justify-center rounded-full border border-border bg-white/45 px-6 py-3 text-sm font-semibold text-foreground transition-colors duration-300 hover:bg-surface-strong"
-                href="#evaluation"
+              </Link>
+              <Link
+                className="inline-flex items-center justify-center rounded-full border border-white/8 bg-[#242424] px-6 py-3 text-sm font-semibold text-white transition-colors duration-300 hover:bg-[#2d2d2d]"
+                href="/methods"
               >
                 Review dataset and metrics
-              </a>
+              </Link>
             </div>
 
             <div className="grid gap-4 border-t border-border/80 pt-6 text-sm text-muted sm:grid-cols-3">
