@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
  * Last updated: 2026-04-07
- * This client component provides the rounded site navigation for the multi-page Query-Quote app shell, now styled as a black navigation rail with lighter charcoal cards and neutral active states.
+ * This client component provides the rounded site navigation for the multi-page Query-Quote app shell, now expressed entirely with Tailwind utility classes.
  */
 
 "use client";
@@ -37,12 +37,12 @@ export function SidebarNav() {
 
   return (
     <aside className="lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)]">
-      <div className="panel panel--nav flex h-full flex-col rounded-[2rem] p-4 sm:p-5">
+      <div className="flex h-full flex-col rounded-[2rem] border border-white/8 bg-black p-4 shadow-[0_18px_48px_rgba(0,0,0,0.34)] sm:p-5">
         <div className="rounded-[1.6rem] border border-white/8 bg-[#111111] px-4 py-4 text-white">
           <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-white/62">
             Query-Quote
           </p>
-          <h1 className="mt-3 [font-family:var(--font-display)] text-3xl leading-none text-white">
+          <h1 className="mt-3 [font-family:var(--font-fraunces)] text-3xl leading-none text-white">
             Movie quote retrieval workspace
           </h1>
           <p className="mt-3 text-sm leading-7 text-white/70">
@@ -52,7 +52,7 @@ export function SidebarNav() {
 
         <nav
           aria-label="Primary"
-          className="nav-scroll mt-4 flex gap-3 overflow-x-auto pb-1 lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-y-auto lg:overflow-x-visible"
+          className="mt-4 flex gap-3 overflow-x-auto pb-1 lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-y-auto lg:overflow-x-visible"
         >
           {navigationItems.map((item) => {
             const isActive = pathname === item.href;

@@ -16,7 +16,7 @@ import {
 
 export default function MethodsPage() {
   return (
-    <main className="page-shell pb-8">
+    <main className="relative overflow-x-clip pb-8">
       <PageLead
         eyebrow="Methods"
         title="The system is organized around classical IR baselines before smarter quote repair."

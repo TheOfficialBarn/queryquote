@@ -32,7 +32,7 @@ const aboutPanels = [
 
 export default function AboutPage() {
   return (
-    <main className="page-shell pb-8">
+    <main className="relative overflow-x-clip pb-8">
       <PageLead
         eyebrow="About"
         title="Query-Quote is a movie search project built around remembered dialogue."
@@ -42,14 +42,14 @@ export default function AboutPage() {
       <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
         <div className="grid gap-4 lg:grid-cols-2">
           {aboutPanels.map((panel) => (
-            <article key={panel.title} className="panel rounded-[1.85rem] p-6 sm:p-7">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-accent-cool">
+            <article key={panel.title} className="rounded-[1.85rem] border border-white/10 bg-neutral-900/85 p-6 shadow-[0_18px_48px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:p-7">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-400">
                 About
               </p>
-              <h3 className="mt-3 [font-family:var(--font-display)] text-3xl leading-tight text-foreground">
+              <h3 className="mt-3 [font-family:var(--font-fraunces)] text-3xl leading-tight text-neutral-100">
                 {panel.title}
               </h3>
-              <p className="mt-4 text-sm leading-7 text-muted">{panel.body}</p>
+              <p className="mt-4 text-sm leading-7 text-neutral-400">{panel.body}</p>
             </article>
           ))}
         </div>

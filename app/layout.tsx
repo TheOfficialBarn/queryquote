@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
  * Last updated: 2026-04-07
- * The root layout now wraps the site in a shared multi-page shell with a rounded sidebar so search, methods, and about content can live on dedicated routes, while explicitly setting the document shell with fixed hex background colors.
+ * The root layout now wraps the site in a shared multi-page shell with a rounded sidebar so search, methods, and about content can live on dedicated routes, with all shell styling expressed directly through Tailwind classes.
  */
 
 import type { Metadata } from "next";
@@ -48,9 +48,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable} h-full bg-[#111111] antialiased`}
+      className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable} h-full scroll-smooth bg-[#111111] antialiased [font-family:var(--font-manrope),sans-serif]`}
     >
-      <body className="min-h-full bg-[#111111] text-foreground">
+      <body className="min-h-full bg-[#111111] text-neutral-100">
         <div className="mx-auto min-h-screen max-w-400 px-3 py-3 sm:px-4 lg:px-5">
           <div className="grid min-h-[calc(100vh-1.5rem)] gap-4 lg:grid-cols-[18.5rem_minmax(0,1fr)]">
             <SidebarNav />

@@ -11,7 +11,7 @@ import { proposalStats } from "@/data/queryquote-content";
 
 export default function Home() {
   return (
-    <main className="page-shell pb-8">
+    <main className="relative overflow-x-clip pb-8">
       <HeroSection stats={proposalStats} />
       <RouteCards />
       <FooterNote />

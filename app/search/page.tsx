@@ -11,7 +11,7 @@ import { demoQueries } from "@/data/queryquote-content";
 
 export default function SearchPage() {
   return (
-    <main className="page-shell pb-8">
+    <main className="relative overflow-x-clip pb-8">
       <PageLead
         eyebrow="Search"
         title="Run quote lookups against the local movie transcript corpus."
