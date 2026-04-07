@@ -1,7 +1,7 @@
 /**
  * PROLOGUE COMMENT
  * Last updated: 2026-04-07
- * This service executes a disk-backed quote search over the local transcript corpus using ripgrep for shortlist generation and in-process ranking for snippets and typo tolerance, and now exposes tokenization and scoring diagnostics for the professor-facing search page.
+ * This service executes a disk-backed quote search over the local transcript corpus using ripgrep for shortlist generation and in-process ranking for snippets and typo tolerance, and now includes a typo-tolerant ordered-window fallback so single-character misquotes do not block the intended film from the candidate set.
  */
 
 import "server-only";
@@ -39,6 +39,7 @@ const TITLE_CLUSTER_TOKEN_MIN_FREQUENCY = 2;
 const LONG_QUOTE_TOKEN_THRESHOLD = 6;
 const YEAR_BIAS_RECENCY_CUTOFF = 2010;
 const YEAR_BIAS_DIVISOR = 20;
+const STRONG_ORIGIN_SIGNAL_ORDERED_COVERAGE = 0.8;
 
 const TITLE_CLUSTER_STOPWORDS = new Set([
   "adventure",
@@ -263,6 +264,21 @@ function buildStrategies(
     });
   }
 
+  const hasDroppedShortTokens =
+    orderedTokens.length >= 3 && orderedTokens.length < fullPhraseTokens.length;
+
+  if (hasDroppedShortTokens) {
+    const typoTolerantPattern = orderedTokens
+      .map((token) => `\\b${buildFlexibleTokenPattern(token)}\\b`)
+      .join(".{0,32}?");
+
+    strategies.push({
+      label: "Typo-tolerant window",
+      patternPreview: orderedTokens.join(" ~ "),
+      ripgrepArgs: buildRipgrepArgs(typoTolerantPattern),
+    });
+  }
+
   if (coreTokens.length >= 2) {
     const loosePattern = coreTokens
       .map((token) => `\\b${buildFlexibleTokenPattern(token)}\\b`)
@@ -404,11 +420,16 @@ async function rankCandidateFiles(
 
   return populatedResults
     .map((result) => {
-      const titleBias = scoreTitleBias(result.normalizedTitle, result.score.phraseHit);
+      const titleBias = scoreTitleBias(
+        result.normalizedTitle,
+        result.score.phraseHit,
+        result.score.orderedCoverage,
+      );
       const clusterBias = scoreClusterBias(
         result.titleTokens,
         clusterTokenFrequencies,
         result.score.phraseHit,
+        result.score.orderedCoverage,
       );
       const contextBias = scoreContextBias(result.snippet, result.score.phraseHit);
       const yearBias = scoreYearBias(
@@ -743,7 +764,7 @@ function buildClusterTokenFrequencies(
   const frequencies = new Map<string, number>();
 
   for (const result of results) {
-    if (!result.score.phraseHit) {
+    if (!hasStrongOriginSignal(result.score.phraseHit, result.score.orderedCoverage)) {
       continue;
     }
 
@@ -755,14 +776,19 @@ function buildClusterTokenFrequencies(
   return frequencies;
 }
 
-function scoreTitleBias(normalizedTitle: string, phraseHit: boolean) {
+function scoreTitleBias(
+  normalizedTitle: string,
+  phraseHit: boolean,
+  orderedCoverage: number,
+) {
   let score = 0;
+  const hasOriginSignal = hasStrongOriginSignal(phraseHit, orderedCoverage);
 
-  if (phraseHit && /\bepisode\b/.test(normalizedTitle)) {
+  if (hasOriginSignal && /\bepisode\b/.test(normalizedTitle)) {
     score += 8;
   }
 
-  if (phraseHit && /\b(part|chapter)\b/.test(normalizedTitle)) {
+  if (hasOriginSignal && /\b(part|chapter)\b/.test(normalizedTitle)) {
     score += 4;
   }
 
@@ -779,8 +805,9 @@ function scoreClusterBias(
   titleTokens: string[],
   frequencies: Map<string, number>,
   phraseHit: boolean,
+  orderedCoverage: number,
 ) {
-  if (!phraseHit) {
+  if (!hasStrongOriginSignal(phraseHit, orderedCoverage)) {
     return 0;
   }
 
@@ -795,6 +822,10 @@ function scoreClusterBias(
   }
 
   return score;
+}
+
+function hasStrongOriginSignal(phraseHit: boolean, orderedCoverage: number) {
+  return phraseHit || orderedCoverage >= STRONG_ORIGIN_SIGNAL_ORDERED_COVERAGE;
 }
 
 function scoreContextBias(snippet: string, phraseHit: boolean) {
