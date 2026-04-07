@@ -1,26 +1,144 @@
 @import "tailwindcss";
 
+/*
+PROLOGUE COMMENT
+Last updated: 2026-04-06
+These global styles replace the starter palette with a warmer editorial search aesthetic, shared panel treatments, and simple entrance motion for the Query-Quote homepage.
+*/
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4ecde;
+  --foreground: #1d1a1e;
+  --muted: #625751;
+  --surface: rgba(255, 250, 242, 0.84);
+  --surface-strong: #fff7ec;
+  --accent: #c76735;
+  --accent-cool: #2a5c65;
+  --border: rgba(29, 26, 30, 0.12);
+  --shadow: 0 28px 80px rgba(46, 29, 18, 0.13);
+  --grid-line: rgba(29, 26, 30, 0.055);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-accent: var(--accent);
+  --color-accent-cool: var(--accent-cool);
+  --color-border: var(--border);
+  --font-sans: var(--font-manrope);
+  --font-mono: var(--font-ibm-plex-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at top left, rgba(199, 103, 53, 0.14), transparent 28%),
+    radial-gradient(circle at top right, rgba(42, 92, 101, 0.12), transparent 34%),
+    linear-gradient(180deg, #f6efe2 0%, #f2e8d6 56%, #efe3cf 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-manrope), sans-serif;
+  position: relative;
+}
+
+body::before {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 84px 84px;
+  content: "";
+  inset: 0;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 16%,
+    black 82%,
+    transparent
+  );
+  opacity: 0.48;
+  pointer-events: none;
+  position: fixed;
+  z-index: -2;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(199, 103, 53, 0.22);
+  color: var(--foreground);
+}
+
+.page-shell {
+  isolation: isolate;
+  overflow-x: clip;
+  position: relative;
+}
+
+.page-shell::before {
+  background:
+    radial-gradient(circle, rgba(199, 103, 53, 0.22) 0%, transparent 62%);
+  content: "";
+  height: 28rem;
+  pointer-events: none;
+  position: absolute;
+  right: -6rem;
+  top: 3rem;
+  width: 28rem;
+  z-index: -1;
+}
+
+.panel {
+  backdrop-filter: blur(18px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  position: relative;
+}
+
+.panel--dark {
+  background:
+    radial-gradient(circle at top right, rgba(199, 103, 53, 0.18), transparent 30%),
+    linear-gradient(180deg, #171515 0%, #231a16 100%);
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 32px 90px rgba(22, 15, 10, 0.45);
+}
+
+.section-kicker {
+  color: var(--accent-cool);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.fade-rise {
+  animation: fade-rise 0.8s cubic-bezier(0.2, 1, 0.3, 1) both;
+}
+
+.fade-rise-delay {
+  animation: fade-rise 0.96s cubic-bezier(0.2, 1, 0.3, 1) 0.12s both;
+}
+
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
